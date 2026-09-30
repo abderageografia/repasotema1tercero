@@ -356,12 +356,20 @@ function canonical(raw){
   "gerona":"Gerona","girona":"Gerona",
   "lerida":"Lérida","lleida":"Lérida",
   "orense":"Orense","ourense":"Orense",
-  "castellon":"Castellón","castello":"Castellón","castellon castello":"Castellón",
-  "alicante":"Alicante","alicante alacant":"Alicante",
-  "valencia":"Valencia","valencia valencia":"Valencia"
+  "castellon":"Castellón","castello":"Castellón","castellon castello":"Castellón","castellon de la plana":"Castellón","castello de la plana":"Castellón",
+  "alicante":"Alicante","alacant":"Alicante","alicante alacant":"Alicante",
+  "valencia":"Valencia","valencia valencia":"Valencia",
+  "navarra":"Navarra","nafarroa":"Navarra"
  };
  return m[n]||String(raw??"").trim()
 }
+const PROVINCE_ALIASES={
+ "Alicante":["Alicante","Alacant"],"Castellón":["Castellón","Castelló","Castellón de la Plana","Castelló de la Plana"],
+ "Valencia":["Valencia","València"],"Gerona":["Gerona","Girona"],"Lérida":["Lérida","Lleida"],
+ "Islas Baleares":["Islas Baleares","Baleares","Illes Balears"],"La Coruña":["La Coruña","A Coruña","Coruña"],
+ "Orense":["Orense","Ourense"],"Álava":["Álava","Araba"],"Guipúzcoa":["Guipúzcoa","Gipuzkoa"],
+ "Vizcaya":["Vizcaya","Bizkaia"],"Navarra":["Navarra","Nafarroa"]
+};
 function visit(c,fn){if(typeof c?.[0]==="number"){fn(c);return}for(const x of c||[])visit(x,fn)}
 function svgEl(t,a={}){const e=document.createElementNS("http://www.w3.org/2000/svg",t);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));return e}
 function rings(g){if(g.type==="Polygon")return g.coordinates;if(g.type==="MultiPolygon")return g.coordinates.flat();return[]}
@@ -483,8 +491,8 @@ function showProvinceTarget(){
  const input=document.getElementById("provinceAnswer");input.value="";setTimeout(()=>{input.focus();focusCurrentTarget()},0)
 }
 function validProvinceAnswer(value,target){
- const answer=canonical(value),expected=canonical(target),a=norm(answer),b=norm(expected);
- if(a===b)return true;const tolerance=b.length>=9?2:1;return a.length>=4&&editDistance(a,b)<=tolerance
+ const expected=canonical(target),a=norm(value),valid=PROVINCE_ALIASES[expected]||[expected];
+ return valid.some(alias=>{const b=norm(alias);if(a===b)return true;const tolerance=b.length>=9?2:1;return a.length>=4&&editDistance(a,b)<=tolerance})
 }
 function submitProvinceAnswer(e){
  e.preventDefault();if(provinceMode!=="write"||!currentProvince)return;
