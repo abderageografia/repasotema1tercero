@@ -63,12 +63,15 @@ svg{touch-action:manipulation;overflow:hidden}
 }
 .province{
   fill:#fff;stroke:#adb7c5;stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:pointer;
-  transition:fill .15s,stroke .15s
+  transition:fill .15s,stroke .15s;outline:none;-webkit-tap-highlight-color:transparent
 }
+.province:focus,.province:focus-visible{outline:none}
 .province:hover{fill:#f4f7fb}
 .province.selected{fill:#f4f7fb;stroke:#6d8fd6;stroke-width:2}
 .province.revealed{fill:#dff5e7;stroke:#2b8a57;stroke-width:1.8}
 .province.target{fill:#fff2b8;stroke:#d88b00;stroke-width:3}
+.provinceLabel{opacity:0;pointer-events:none;fill:#174d35;stroke:#fff;stroke-width:2.4px;paint-order:stroke fill;text-anchor:middle;dominant-baseline:middle;font-weight:500;letter-spacing:.1px;transition:opacity .15s}
+.provinceLabel.revealed{opacity:1}
 .modebar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
 .modebtn{border:1px solid #dce3ec;background:#f5f7fa;color:#344159;border-radius:10px;padding:7px 11px;font:inherit;font-weight:850;cursor:pointer}
 .modebtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -296,6 +299,13 @@ let termOrder=[],termPosition=0,termsStarted=false;
 let selectedProvincePath=null;
 let provinceMode="write",provinceOrder=[],provincePosition=0,currentProvince="";
 const provincePaths=new Map();
+const provinceLabels=new Map();
+const PROVINCE_LABEL_TWEAKS={
+ "Palencia":{dx:-10,dy:-11,font:15},"Burgos":{dx:13,dy:-8,font:18},"Valladolid":{dx:-8,dy:10,font:14.5},
+ "Segovia":{dx:5,dy:6,font:16},"Zamora":{dx:-5,dy:0,font:18},"Ávila":{dx:0,dy:7,font:18},
+ "Álava":{dx:-5,dy:7,font:11},"Vizcaya":{dx:-8,dy:-5,font:11},"Guipúzcoa":{dx:9,dy:-1,font:10},
+ "La Rioja":{dx:4,dy:7,font:12},"Madrid":{dx:0,dy:5,font:14},"Barcelona":{dx:-7,dy:1,font:14},"Gerona":{dx:7,dy:-4,font:12}
+};
 const riverGames={
  riversSpain:{mode:"reveal",order:[],position:0,current:"",nodes:new Map(),list:null},
  riversAndalusia:{mode:"reveal",order:[],position:0,current:"",nodes:new Map(),list:null}
@@ -461,7 +471,7 @@ function drawProvinces(){
  const mainSvg=document.getElementById("provMain"),balSvg=document.getElementById("provBal"),canSvg=document.getElementById("provCan");
  const pm=makeProj(mainland,1000,650),pb=makeProj(balear,300,180),pc=makeProj(canary,360,180);
  drawBase(mainSvg,mainland,pm,false);drawBase(balSvg,balear,pb,false);drawBase(canSvg,canary,pc,false);
- provincePaths.clear();
+ provincePaths.clear();provinceLabels.clear();const pendingLabels=[];
  geoFeatures.forEach(f=>{const name=canonical(f.properties.provincia),ctx=name==="Islas Baleares"?[balSvg,pb]:["Las Palmas","Santa Cruz de Tenerife"].includes(name)?[canSvg,pc]:[mainSvg,pm];
  const path=svgEl("path",{d:geomPath(f.geometry,ctx[1]),class:"province",tabindex:"0",role:"button","aria-label":"Provincia sin nombre"});
  const fn=()=>{
@@ -469,14 +479,20 @@ function drawProvinces(){
   if(path.classList.contains("revealed"))return;
   if(selectedProvincePath===path){
    path.classList.remove("selected");path.classList.add("revealed");selectedProvincePath=null;
-   revealName("provinces",name,geoFeatures.length);return
+   showProvinceLabel(name);revealName("provinces",name,geoFeatures.length);return
   }
   if(selectedProvincePath)selectedProvincePath.classList.remove("selected");
   selectedProvincePath=path;path.classList.add("selected");
   promptEl.className="prompt empty";promptEl.textContent="Vuelve a pulsar la provincia para mostrar su nombre"
  };
- path.addEventListener("click",fn);path.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fn()}});ctx[0].appendChild(path);provincePaths.set(name,path)});
+ path.addEventListener("click",fn);path.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fn()}});ctx[0].appendChild(path);provincePaths.set(name,path);
+ const box=path.getBBox(),basePoint=f.properties.geo_point_2d?ctx[1]([f.properties.geo_point_2d.lon,f.properties.geo_point_2d.lat]):[box.x+box.width/2,box.y+box.height/2],tweak=PROVINCE_LABEL_TWEAKS[name]||{},point=[basePoint[0]+(tweak.dx||0),basePoint[1]+(tweak.dy||0)];
+ const words=name.split(" "),twoLines=name.length>12&&words.length>1,lines=twoLines?[words.slice(0,Math.ceil(words.length/2)).join(" "),words.slice(Math.ceil(words.length/2)).join(" ")]:[name],longest=Math.max(...lines.map(x=>x.length));
+ const font=tweak.font||Math.max(8,Math.min(24,box.width/(longest*.55),box.height/(lines.length*1.35)));
+ const label=svgEl("text",{class:"provinceLabel",x:point[0].toFixed(1),y:point[1].toFixed(1),"font-size":font.toFixed(1)});
+ lines.forEach((line,i)=>{const span=svgEl("tspan",{x:point[0].toFixed(1),dy:i===0&&lines.length>1?(-font*.48).toFixed(1):i===0?"0":(font*1.02).toFixed(1)});span.textContent=line;label.appendChild(span)});provinceLabels.set(name,label);pendingLabels.push([ctx[0],label])});
  drawCommunityBorders(mainSvg,mainland,pm);
+ pendingLabels.forEach(([svg,label])=>svg.appendChild(label));
  document.getElementById("provStatus")?.remove();buildList("provList",geoFeatures.map(f=>canonical(f.properties.provincia)).sort((a,b)=>a.localeCompare(b,"es")),"provinces");startProvinceRound();requestAnimationFrame(syncIslandBorderWidth)
 }
 function shuffledProvinceNames(){const a=geoFeatures.map(f=>canonical(f.properties.provincia));for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -494,11 +510,12 @@ function validProvinceAnswer(value,target){
  const expected=canonical(target),a=norm(value),valid=PROVINCE_ALIASES[expected]||[expected];
  return valid.some(alias=>{const b=norm(alias);if(a===b)return true;const tolerance=b.length>=9?2:1;return a.length>=4&&editDistance(a,b)<=tolerance})
 }
+function showProvinceLabel(name){provinceLabels.get(name)?.classList.add("revealed")}
 function submitProvinceAnswer(e){
  e.preventDefault();if(provinceMode!=="write"||!currentProvince)return;
  const input=document.getElementById("provinceAnswer"),feedback=document.getElementById("provinceFeedback");
  if(validProvinceAnswer(input.value,currentProvince)){
-  provincePaths.get(currentProvince)?.classList.remove("target");provincePaths.get(currentProvince)?.classList.add("revealed");
+  provincePaths.get(currentProvince)?.classList.remove("target");provincePaths.get(currentProvince)?.classList.add("revealed");showProvinceLabel(currentProvince);
   revealName("provinces",currentProvince,geoFeatures.length);feedback.className="feedback ok";feedback.textContent=`Correcto: ${currentProvince}`;provincePosition++;setTimeout(showProvinceTarget,500)
  }else{feedback.className="feedback bad";feedback.textContent="No es correcto. Inténtalo otra vez.";input.select()}
 }
