@@ -58,7 +58,7 @@ svg{touch-action:manipulation;overflow:hidden}
   stroke-linecap:round;stroke-linejoin:round;pointer-events:none
 }
 .community-boundary{
-  fill:none;stroke:#586577;stroke-width:3.4;vector-effect:non-scaling-stroke;
+  fill:none;stroke:#586577;stroke-width:4.6;
   stroke-linecap:round;stroke-linejoin:round;pointer-events:none
 }
 .province{
@@ -159,14 +159,21 @@ body.keyboard-open #provinces .focusIslandCol{display:block;height:100%}
   .tabs{display:grid;grid-template-columns:repeat(3,1fr);width:100%}
   .tab{width:100%;padding:7px 4px;font-size:12px}
   .list{grid-template-columns:1fr 1fr;max-height:76px}
-  .mapGrid{grid-template-columns:minmax(0,1fr) 110px}
-  .inset svg{height:100px}
+  .mapGrid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 118px}
+  .islandCol{grid-template-columns:1fr 1fr;grid-template-rows:1fr;min-height:0}
+  .inset svg{height:calc(100% - 16px);min-height:0}
+  .inset .outer{stroke-width:1.7}
   .answerRow{grid-template-columns:1fr}.checkbtn{width:100%}
 }
 @media(max-height:750px){
   .subtitle{display:none}.top{margin-bottom:3px}h1{font-size:29px}.tab{padding:7px 9px}
   .prompt{min-height:40px;margin-bottom:4px;padding:4px 8px}.modebar{margin-bottom:4px}.modebtn{padding:7px 10px}
   .list{display:none}.controls{margin-top:4px}.note{display:none}
+}
+@media(min-width:900px) and (min-aspect-ratio:4/3){
+  .subtitle{display:none}.top{margin-bottom:3px}
+  .list{display:none}.controls{margin-top:4px}.note{display:none}
+  .prompt{min-height:40px}.modebar{margin-bottom:4px}
 }
 </style>
 </head>
@@ -455,7 +462,7 @@ function drawProvinces(){
   promptEl.className="prompt empty";promptEl.textContent="Vuelve a pulsar la provincia para mostrar su nombre"
  };
  path.addEventListener("click",fn);path.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fn()}});ctx[0].appendChild(path);provincePaths.set(name,path)});
- drawCommunityBorders(mainSvg,mainland,pm);drawCommunityBorders(balSvg,balear,pb);drawCommunityBorders(canSvg,canary,pc);
+ drawCommunityBorders(mainSvg,mainland,pm);
  document.getElementById("provStatus")?.remove();buildList("provList",geoFeatures.map(f=>canonical(f.properties.provincia)).sort((a,b)=>a.localeCompare(b,"es")),"provinces");startProvinceRound()
 }
 function shuffledProvinceNames(){const a=geoFeatures.map(f=>canonical(f.properties.provincia));for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -526,10 +533,14 @@ function focusSvgElement(element){
  if(!element)return;const svg=element.ownerSVGElement;if(!svg)return;const box=element.closest(".mainMap,.inset,.singleMap");box?.classList.add("focusMapBox");box?.closest(".islandCol")?.classList.add("focusIslandCol");if(!svg.dataset.defaultViewbox)svg.dataset.defaultViewbox=svg.getAttribute("viewBox");
  const b=element.getBBox(),pad=Math.max(b.width,b.height)*.38+12;svg.setAttribute("viewBox",`${b.x-pad} ${b.y-pad} ${b.width+pad*2} ${b.height+pad*2}`)
 }
+function showWholeTargetMap(element){
+ if(!element)return;const svg=element.ownerSVGElement;if(!svg)return;const box=element.closest(".mainMap,.inset");box?.classList.add("focusMapBox");box?.closest(".islandCol")?.classList.add("focusIslandCol");
+ if(svg.dataset.defaultViewbox){svg.setAttribute("viewBox",svg.dataset.defaultViewbox);delete svg.dataset.defaultViewbox}
+}
 function focusCurrentTarget(){
  restoreMapViews();if(!document.body.classList.contains("keyboard-open"))return;
  const active=document.querySelector(".panel.active")?.id;
- if(active==="provinces"&&provinceMode==="write")focusSvgElement(provincePaths.get(currentProvince));
+ if(active==="provinces"&&provinceMode==="write")showWholeTargetMap(provincePaths.get(currentProvince));
  if((active==="riversSpain"||active==="riversAndalusia")&&riverGames[active].mode==="write")focusSvgElement(riverGames[active].nodes.get(riverGames[active].current)?.group)
 }
 function fitToVisibleViewport(){
