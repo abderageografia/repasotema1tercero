@@ -33,9 +33,9 @@ h1{margin:0 0 2px;font-size:clamp(24px,2.3vw,34px);line-height:1.03;letter-spaci
 .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
 button:focus-visible,input:focus-visible,.province:focus-visible{outline:3px solid #f0b429;outline-offset:2px}
 .prompt{
-  min-height:46px;display:flex;align-items:center;justify-content:center;text-align:center;
+  height:52px;min-height:52px;max-height:52px;flex:0 0 52px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;
   border:1px solid #dce5f7;background:#f7f9fd;border-radius:12px;padding:6px 11px;
-  font-size:clamp(17px,1.55vw,23px);font-weight:900;margin-bottom:5px
+  font-size:clamp(17px,1.55vw,23px);line-height:1.15;font-weight:900;margin-bottom:5px
 }
 .prompt.empty{color:var(--muted);font-weight:700}
 .prompt small{display:block;font-size:12px;color:var(--muted);font-weight:650;margin-top:3px}
@@ -143,7 +143,7 @@ svg{touch-action:manipulation;overflow:hidden}
 body.terms-mode #prompt{display:none}
 body.keyboard-open .top,body.keyboard-open .modebar,body.keyboard-open .list,body.keyboard-open .controls,body.keyboard-open .note{display:none!important}
 body.keyboard-open .app{padding:5px}
-body.keyboard-open .prompt{min-height:42px;margin-bottom:4px;padding:5px 9px;font-size:16px}
+body.keyboard-open .prompt{height:42px;min-height:42px;max-height:42px;flex-basis:42px;margin-bottom:4px;padding:5px 9px;font-size:16px}
 body.keyboard-open .answerRow{margin-bottom:4px}
 body.keyboard-open .feedback{min-height:20px;margin:0 0 3px}
 body.keyboard-open #provinces .mapGrid{display:block;flex:1;min-height:0}
@@ -172,13 +172,13 @@ body.keyboard-open #provinces .focusIslandCol{display:block;height:100%}
 }
 @media(max-height:750px){
   .subtitle{display:none}.top{margin-bottom:3px}h1{font-size:29px}.tab{padding:7px 9px}
-  .prompt{min-height:40px;margin-bottom:4px;padding:4px 8px}.modebar{margin-bottom:4px}.modebtn{padding:7px 10px}
+  .prompt{height:44px;min-height:44px;max-height:44px;flex-basis:44px;margin-bottom:4px;padding:4px 8px}.modebar{margin-bottom:4px}.modebtn{padding:7px 10px}
   .list{display:none}.controls{margin-top:4px}.note{display:none}
 }
 @media(min-width:900px) and (min-aspect-ratio:4/3){
   .subtitle{display:none}.top{margin-bottom:3px}
   .list{display:none}.controls{margin-top:4px}.note{display:none}
-  .prompt{min-height:40px}.modebar{margin-bottom:4px}
+  .prompt{height:44px;min-height:44px;max-height:44px;flex-basis:44px}.modebar{margin-bottom:4px}
 }
 </style>
 </head>
