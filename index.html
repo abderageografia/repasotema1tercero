@@ -464,6 +464,12 @@ function drawBase(svg,fs,p,showInternal=false){
  if(showInternal)fs.forEach(f=>svg.appendChild(svgEl("path",{d:geomPath(f.geometry,p),fill:"none",stroke:"#d5dbe4","stroke-width":"1","vector-effect":"non-scaling-stroke"})));
  svg.appendChild(svgEl("path",{d:outerPath(fs,p),class:"outer"}))
 }
+function fitSvgToFeatures(svg,fs,p,pad=10){
+ let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+ fs.forEach(f=>visit(f.geometry.coordinates,c=>{const q=p(c);minX=Math.min(minX,q[0]);maxX=Math.max(maxX,q[0]);minY=Math.min(minY,q[1]);maxY=Math.max(maxY,q[1])}));
+ if(!Number.isFinite(minX)||maxX<=minX||maxY<=minY)return;
+ svg.setAttribute("viewBox",`${(minX-pad).toFixed(1)} ${(minY-pad).toFixed(1)} ${(maxX-minX+pad*2).toFixed(1)} ${(maxY-minY+pad*2).toFixed(1)}`)
+}
 function drawCommunityBorders(svg,fs,p){
  const groups=new Map();
  fs.forEach(f=>{const key=f.properties.cod_ccaa||f.properties.ccaa;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(f)});
@@ -501,6 +507,7 @@ function drawProvinces(){
  lines.forEach((line,i)=>{const span=svgEl("tspan",{x:point[0].toFixed(1),dy:i===0&&lines.length>1?(-font*.48).toFixed(1):i===0?"0":(font*1.02).toFixed(1)});span.textContent=line;label.appendChild(span)});provinceLabels.set(name,label);pendingLabels.push([ctx[0],label])});
  drawCommunityBorders(mainSvg,mainland,pm);
  pendingLabels.forEach(([svg,label])=>svg.appendChild(label));
+ fitSvgToFeatures(mainSvg,mainland,pm,10);
  document.getElementById("provStatus")?.remove();buildList("provList",geoFeatures.map(f=>canonical(f.properties.provincia)).sort((a,b)=>a.localeCompare(b,"es")),"provinces");startProvinceRound();requestAnimationFrame(syncIslandBorderWidth)
 }
 function shuffledProvinceNames(){const a=geoFeatures.map(f=>canonical(f.properties.provincia));for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -540,7 +547,7 @@ function drawRelief(){
  const svg=document.getElementById("reliefMap"),p=makeProj(mainland,1000,650);drawBase(svg,mainland,p,true);
  RELIEF.forEach(u=>{const path=svgEl("path",{d:smoothClosed(u.poly,p),class:"relief",tabindex:"0",role:"button"});
  const fn=()=>{path.classList.add("revealed");revealName("relief",u.name,RELIEF.length)};path.addEventListener("click",fn);path.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fn()}});svg.appendChild(path)});
- buildList("reliefList",RELIEF.map(x=>x.name),"relief")
+ fitSvgToFeatures(svg,mainland,p,10);buildList("reliefList",RELIEF.map(x=>x.name),"relief")
 }
 function drawRivers(svgId,list,type,fs){
  const svg=document.getElementById(svgId),p=makeProj(fs,1000,650);drawBase(svg,fs,p,true);riverGames[type].list=list;riverGames[type].nodes.clear();
@@ -555,6 +562,7 @@ function drawRivers(svgId,list,type,fs){
   g.appendChild(hit);g.appendChild(vis);svg.appendChild(g);
   const point=vis.getPointAtLength(vis.getTotalLength()*.56),specialY=r.name==="Turia"?-32:r.name==="Júcar"?24:r.name==="Odiel"?-38:r.name==="Tinto"?30:-15;label.setAttribute("x",point.x);label.setAttribute("y",point.y+specialY);svg.appendChild(label);riverGames[type].nodes.set(r.name,{group:g,label})
  });
+ fitSvgToFeatures(svg,fs,p,10);
  buildList(type==="riversSpain"?"riversSpainList":"riversAndList",list.map(x=>x.name),type)
 }
 function startRiverRound(type){
