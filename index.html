@@ -528,7 +528,7 @@ function drawRivers(svgId,list,type,fs){
   const fn=()=>{if(riverGames[type].mode!=="reveal")return;g.classList.add("revealed");label.classList.add("revealed");revealName(type,r.name,list.length)};
   hit.addEventListener("click",fn);
   g.appendChild(hit);g.appendChild(vis);svg.appendChild(g);
-  const point=vis.getPointAtLength(vis.getTotalLength()*.56),specialY=r.name==="Turia"?-32:r.name==="Júcar"?24:-15;label.setAttribute("x",point.x);label.setAttribute("y",point.y+specialY);svg.appendChild(label);riverGames[type].nodes.set(r.name,{group:g,label})
+  const point=vis.getPointAtLength(vis.getTotalLength()*.56),specialY=r.name==="Turia"?-32:r.name==="Júcar"?24:r.name==="Odiel"?-38:r.name==="Tinto"?30:-15;label.setAttribute("x",point.x);label.setAttribute("y",point.y+specialY);svg.appendChild(label);riverGames[type].nodes.set(r.name,{group:g,label})
  });
  buildList(type==="riversSpain"?"riversSpainList":"riversAndList",list.map(x=>x.name),type)
 }
