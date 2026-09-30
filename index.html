@@ -63,8 +63,9 @@ svg{touch-action:manipulation;overflow:hidden}
 }
 .province{
   fill:#fff;stroke:#adb7c5;stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:pointer;
-  transition:fill .15s,stroke .15s
+  transition:fill .15s,stroke .15s;outline:none;-webkit-tap-highlight-color:transparent
 }
+.province:focus,.province:focus-visible{outline:none}
 .province:hover{fill:#f4f7fb}
 .province.selected{fill:#f4f7fb;stroke:#6d8fd6;stroke-width:2}
 .province.revealed{fill:#dff5e7;stroke:#2b8a57;stroke-width:1.8}
@@ -163,6 +164,8 @@ body.keyboard-open #provinces .focusIslandCol{display:block;height:100%}
   .list{grid-template-columns:1fr 1fr;max-height:76px}
   .mapGrid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 118px}
   .islandCol{grid-template-columns:1fr 1fr;grid-template-rows:1fr;min-height:0}
+  .islandCol .inset:first-child{order:2}
+  .islandCol .inset:last-child{order:1}
   .inset svg{height:calc(100% - 16px);min-height:0}
   .riverLabel{font-size:38px;stroke-width:8px}
   .answerRow{grid-template-columns:1fr}.checkbtn{width:100%}
@@ -431,6 +434,11 @@ function revealName(type,name,total){
  const item=[...document.getElementById(panel).children].find(x=>x.dataset.name===name);
  if(item){item.textContent=name;item.classList.add("revealed")}updateProgress(type,total)
 }
+function haptic(kind="tap"){
+ if(!navigator.vibrate||!(matchMedia("(pointer: coarse)").matches||"ontouchstart" in window))return;
+ const patterns={tap:3,select:1,reveal:1,success:[10,18,18],error:[20,32,20],skip:5};
+ navigator.vibrate(patterns[kind]||patterns.tap)
+}
 function resetType(type){
  revealed[type].clear();promptEl.className="prompt empty";promptEl.textContent="Pulsa un elemento del mapa para ver su nombre";
  const panel=type==="provinces"?"provList":type==="relief"?"reliefList":type==="riversSpain"?"riversSpainList":"riversAndList";
@@ -476,12 +484,13 @@ function drawProvinces(){
  const fn=()=>{
   if(provinceMode!=="reveal")return;
   if(path.classList.contains("revealed"))return;
-  if(selectedProvincePath===path){
+ if(selectedProvincePath===path){
    path.classList.remove("selected");path.classList.add("revealed");selectedProvincePath=null;
-   showProvinceLabel(name);revealName("provinces",name,geoFeatures.length);return
+   showProvinceLabel(name);revealName("provinces",name,geoFeatures.length);haptic("reveal");return
   }
   if(selectedProvincePath)selectedProvincePath.classList.remove("selected");
   selectedProvincePath=path;path.classList.add("selected");
+  haptic("select");
   promptEl.className="prompt empty";promptEl.textContent="Vuelve a pulsar la provincia para mostrar su nombre"
  };
  path.addEventListener("click",fn);path.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fn()}});ctx[0].appendChild(path);provincePaths.set(name,path);
@@ -515,12 +524,12 @@ function submitProvinceAnswer(e){
  const input=document.getElementById("provinceAnswer"),feedback=document.getElementById("provinceFeedback");
  if(validProvinceAnswer(input.value,currentProvince)){
   provincePaths.get(currentProvince)?.classList.remove("target");provincePaths.get(currentProvince)?.classList.add("revealed");showProvinceLabel(currentProvince);
-  revealName("provinces",currentProvince,geoFeatures.length);feedback.className="feedback ok";feedback.textContent=`Correcto: ${currentProvince}`;provincePosition++;setTimeout(showProvinceTarget,500)
- }else{feedback.className="feedback bad";feedback.textContent="No es correcto. Inténtalo otra vez.";input.select()}
+  revealName("provinces",currentProvince,geoFeatures.length);feedback.className="feedback ok";feedback.textContent=`Correcto: ${currentProvince}`;haptic("success");provincePosition++;setTimeout(showProvinceTarget,500)
+ }else{feedback.className="feedback bad";feedback.textContent="No es correcto. Inténtalo otra vez.";haptic("error");input.select()}
 }
 function skipProvince(){
  if(provinceMode!=="write"||!currentProvince||provinceOrder.length-provincePosition<2)return;
- const skipped=provinceOrder.splice(provincePosition,1)[0];provinceOrder.push(skipped);const feedback=document.getElementById("provinceFeedback");feedback.className="feedback";feedback.textContent="Provincia saltada: aparecerá más adelante.";showProvinceTarget()
+ const skipped=provinceOrder.splice(provincePosition,1)[0];provinceOrder.push(skipped);const feedback=document.getElementById("provinceFeedback");feedback.className="feedback";feedback.textContent="Provincia saltada: aparecerá más adelante.";haptic("skip");showProvinceTarget()
 }
 function setProvinceMode(mode){
  provinceMode=mode;document.querySelectorAll("[data-prov-mode]").forEach(b=>b.classList.toggle("active",b.dataset.provMode===mode));
@@ -541,7 +550,7 @@ function drawRivers(svgId,list,type,fs){
   const hit=svgEl("path",{d:pathData,class:"river hit"});
   const vis=svgEl("path",{d:pathData,class:"river visible"});
   const label=svgEl("text",{class:"riverLabel"});label.textContent=r.name;
-  const fn=()=>{if(riverGames[type].mode!=="reveal")return;g.classList.add("revealed");label.classList.add("revealed");revealName(type,r.name,list.length)};
+  const fn=()=>{if(riverGames[type].mode!=="reveal")return;g.classList.add("revealed");label.classList.add("revealed");revealName(type,r.name,list.length);haptic("reveal")};
   hit.addEventListener("click",fn);
   g.appendChild(hit);g.appendChild(vis);svg.appendChild(g);
   const point=vis.getPointAtLength(vis.getTotalLength()*.56),specialY=r.name==="Turia"?-32:r.name==="Júcar"?24:r.name==="Odiel"?-38:r.name==="Tinto"?30:-15;label.setAttribute("x",point.x);label.setAttribute("y",point.y+specialY);svg.appendChild(label);riverGames[type].nodes.set(r.name,{group:g,label})
@@ -588,12 +597,12 @@ function submitRiverAnswer(type,e){
  const input=document.getElementById(type+"Answer"),feedback=document.getElementById(type+"Feedback"),expected=riverNorm(game.current),answer=riverNorm(input.value),tolerance=expected.length>=8?2:1;
  if(answer===expected||(answer.length>=4&&editDistance(answer,expected)<=tolerance)){
   const node=game.nodes.get(game.current);node.group.classList.remove("target");node.group.classList.add("revealed");node.label.classList.add("revealed");revealName(type,game.current,game.list.length);
-  feedback.className="feedback ok";feedback.textContent=`Correcto: ${game.current}`;game.position++;setTimeout(()=>showRiverTarget(type),500)
- }else{feedback.className="feedback bad";feedback.textContent="No es correcto. Inténtalo otra vez.";input.select()}
+  feedback.className="feedback ok";feedback.textContent=`Correcto: ${game.current}`;haptic("success");game.position++;setTimeout(()=>showRiverTarget(type),500)
+ }else{feedback.className="feedback bad";feedback.textContent="No es correcto. Inténtalo otra vez.";haptic("error");input.select()}
 }
 function skipRiver(type){
  const game=riverGames[type];if(game.mode!=="write"||!game.current||game.order.length-game.position<2)return;
- const skipped=game.order.splice(game.position,1)[0];game.order.push(skipped);const feedback=document.getElementById(type+"Feedback");feedback.className="feedback";feedback.textContent="Río saltado: aparecerá más adelante.";showRiverTarget(type)
+ const skipped=game.order.splice(game.position,1)[0];game.order.push(skipped);const feedback=document.getElementById(type+"Feedback");feedback.className="feedback";feedback.textContent="Río saltado: aparecerá más adelante.";haptic("skip");showRiverTarget(type)
 }
 function setRiverMode(type,mode){
  const game=riverGames[type];game.mode=mode;document.querySelectorAll(`[data-river-type="${type}"]`).forEach(b=>b.classList.toggle("active",b.dataset.riverMode===mode));document.getElementById(type+"Form").classList.toggle("active",mode==="write");resetType(type);
@@ -643,12 +652,12 @@ async function init(){
   document.getElementById("provStatus").textContent="No se pudo iniciar el mapa en este navegador."
  }
 }
-document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
-document.querySelectorAll("[data-reset]").forEach(b=>b.addEventListener("click",()=>resetType(b.dataset.reset)));
-document.querySelectorAll("[data-prov-mode]").forEach(b=>b.addEventListener("click",()=>setProvinceMode(b.dataset.provMode)));
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{haptic("tap");setTab(b.dataset.tab)}));
+document.querySelectorAll("[data-reset]").forEach(b=>b.addEventListener("click",()=>{haptic("tap");resetType(b.dataset.reset)}));
+document.querySelectorAll("[data-prov-mode]").forEach(b=>b.addEventListener("click",()=>{haptic("tap");setProvinceMode(b.dataset.provMode)}));
 document.getElementById("provinceForm").addEventListener("submit",submitProvinceAnswer);
 document.getElementById("skipProvince").addEventListener("click",skipProvince);
-document.querySelectorAll("[data-river-mode]").forEach(b=>b.addEventListener("click",()=>setRiverMode(b.dataset.riverType,b.dataset.riverMode)));
+document.querySelectorAll("[data-river-mode]").forEach(b=>b.addEventListener("click",()=>{haptic("tap");setRiverMode(b.dataset.riverType,b.dataset.riverMode)}));
 document.getElementById("riversSpainForm").addEventListener("submit",e=>submitRiverAnswer("riversSpain",e));
 document.getElementById("riversAndalusiaForm").addEventListener("submit",e=>submitRiverAnswer("riversAndalusia",e));
 document.querySelectorAll("[data-skip-river]").forEach(b=>b.addEventListener("click",()=>skipRiver(b.dataset.skipRiver)));
