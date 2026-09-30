@@ -200,6 +200,7 @@ body.keyboard-open #provinces .focusIslandCol{display:block;height:100%}
   <form class="answerRow active" id="provinceForm" autocomplete="off">
     <input class="answerInput" id="provinceAnswer" aria-label="Nombre de la provincia" placeholder="Escribe la provincia señalada…" spellcheck="false">
     <button class="checkbtn" type="submit">Comprobar</button>
+    <button class="skipbtn" type="button" id="skipProvince">Saltar provincia</button>
   </form>
   <div class="feedback" id="provinceFeedback" aria-live="polite"></div>
   <div class="mapGrid">
@@ -492,6 +493,10 @@ function submitProvinceAnswer(e){
   revealName("provinces",currentProvince,geoFeatures.length);feedback.className="feedback ok";feedback.textContent=`Correcto: ${currentProvince}`;provincePosition++;setTimeout(showProvinceTarget,500)
  }else{feedback.className="feedback bad";feedback.textContent="No es correcto. Inténtalo otra vez.";input.select()}
 }
+function skipProvince(){
+ if(provinceMode!=="write"||!currentProvince||provinceOrder.length-provincePosition<2)return;
+ const skipped=provinceOrder.splice(provincePosition,1)[0];provinceOrder.push(skipped);const feedback=document.getElementById("provinceFeedback");feedback.className="feedback";feedback.textContent="Provincia saltada: aparecerá más adelante.";showProvinceTarget()
+}
 function setProvinceMode(mode){
  provinceMode=mode;document.querySelectorAll("[data-prov-mode]").forEach(b=>b.classList.toggle("active",b.dataset.provMode===mode));
  document.getElementById("provinceForm").classList.toggle("active",mode==="write");resetType("provinces");
@@ -617,6 +622,7 @@ document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>setT
 document.querySelectorAll("[data-reset]").forEach(b=>b.addEventListener("click",()=>resetType(b.dataset.reset)));
 document.querySelectorAll("[data-prov-mode]").forEach(b=>b.addEventListener("click",()=>setProvinceMode(b.dataset.provMode)));
 document.getElementById("provinceForm").addEventListener("submit",submitProvinceAnswer);
+document.getElementById("skipProvince").addEventListener("click",skipProvince);
 document.querySelectorAll("[data-river-mode]").forEach(b=>b.addEventListener("click",()=>setRiverMode(b.dataset.riverType,b.dataset.riverMode)));
 document.getElementById("riversSpainForm").addEventListener("submit",e=>submitRiverAnswer("riversSpain",e));
 document.getElementById("riversAndalusiaForm").addEventListener("submit",e=>submitRiverAnswer("riversAndalusia",e));
